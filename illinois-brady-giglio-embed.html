@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Illinois Brady/Giglio officer database</title>
+<style>
+:root{
+  --ink:#1c2430; --muted:#5c6673; --rule:#d8dde3; --wash:#f4f6f8; --paper:#fff;
+  --accent:#1f4f6b; --alert:#8c2f39;
+  --serif:Georgia,"Times New Roman",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45}
+.wrap{max-width:980px;margin:0 auto;padding:16px 14px 20px}
+h1{font-family:var(--serif);font-size:1.7rem;line-height:1.15;margin:0 0 6px;font-weight:700}
+.dek{font-family:var(--serif);color:var(--muted);margin:0 0 14px;max-width:68ch;font-size:1.02rem;line-height:1.5}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.controls{display:grid;grid-template-columns:2fr 1.2fr 1.2fr 1fr auto;gap:8px;align-items:end;margin-bottom:14px}
+.field label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:3px}
+.field input,.field select{width:100%;height:38px;padding:0 10px;border:1px solid #b9c1ca;border-radius:4px;background:#fff;color:var(--ink);font:inherit}
+button.reset{height:38px;padding:0 12px;border:1px solid #b9c1ca;border-radius:4px;background:#fff;font:inherit;color:var(--ink);cursor:pointer}
+button.reset:hover{background:var(--wash)}
+
+.mix{margin:2px 0 14px}
+.mix h2{font-size:.9rem;margin:0 0 6px;font-weight:600}
+.bar{display:flex;height:18px;border-radius:3px;overflow:hidden;background:var(--wash);gap:1px}
+.bar button{border:0;padding:0;margin:0;cursor:pointer;min-width:2px;transition:opacity .15s}
+.bar.filtering button:not(.on){opacity:.28}
+.chips{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:9px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--rule);background:#fff;border-radius:999px;padding:3px 10px 3px 8px;font:inherit;font-size:.82rem;cursor:pointer;color:var(--ink)}
+.chip:hover{background:var(--wash)}
+.chip.on{border-color:var(--ink);background:var(--ink);color:#fff}
+.chip i{width:10px;height:10px;border-radius:2px;display:inline-block;border:1px solid rgba(0,0,0,.12)}
+.chip b{font-weight:600}
+
+.bar-row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 6px;flex-wrap:wrap}
+.count{font-size:.92rem}
+.count strong{font-weight:700}
+.linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--accent);text-decoration:underline;cursor:pointer}
+
+table{width:100%;border-collapse:collapse}
+thead th{position:sticky;top:0;background:#fff;text-align:left;font-size:.8rem;font-weight:600;color:var(--muted);border-bottom:2px solid var(--ink);padding:0}
+thead th button{all:unset;display:block;width:100%;padding:8px 8px 8px 0;cursor:pointer;box-sizing:border-box}
+thead th button:focus-visible{outline:3px solid var(--accent);outline-offset:-2px}
+thead th[aria-sort="ascending"] button::after{content:" \25B2";font-size:.65em}
+thead th[aria-sort="descending"] button::after{content:" \25BC";font-size:.65em}
+tbody td{padding:9px 8px 9px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+td.name{font-weight:600}
+td.na,.na{color:#7b8591}
+.decert{color:var(--alert);font-weight:600}
+.exp{all:unset;cursor:pointer;color:var(--accent);font-size:.82rem;text-decoration:underline;white-space:nowrap}
+.exp:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+tr.detail td{background:var(--wash);padding:10px 12px;border-bottom:1px solid var(--rule)}
+dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 18px;margin:0}
+dt{font-size:.75rem;color:var(--muted)}
+dd{margin:0;font-size:.9rem}
+.empty{padding:26px 8px;text-align:center;color:var(--muted)}
+
+.pager{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:10px;flex-wrap:wrap}
+.pager button{height:36px;padding:0 14px;border:1px solid #b9c1ca;border-radius:4px;background:#fff;font:inherit;cursor:pointer}
+.pager button:disabled{opacity:.4;cursor:default}
+.pager span{font-size:.88rem;color:var(--muted)}
+
+.foot{margin-top:18px;padding-top:10px;border-top:1px solid var(--rule);font-size:.82rem;color:var(--muted);line-height:1.5}
+.foot p{margin:0 0 6px}
+.mobile-sort{display:none}
+
+@media (max-width:760px){
+  .controls{grid-template-columns:1fr 1fr}
+  .field.q{grid-column:1 / -1}
+  .mobile-sort{display:block}
+  thead{position:absolute;left:-9999px}
+  table,tbody,tr,td{display:block;width:100%}
+  tbody tr.row{padding:10px 0;border-bottom:1px solid var(--rule)}
+  tbody td{border:0;padding:2px 0;display:grid;grid-template-columns:118px 1fr;gap:8px}
+  tbody td::before{content:attr(data-label);font-size:.78rem;color:var(--muted);padding-top:2px}
+  tbody td.name{font-size:1.05rem;display:block}
+  tbody td.name::before{content:none}
+  tbody td.act{display:block;padding-top:6px}
+  tbody td.act::before{content:none}
+  tr.detail{display:block}
+  tr.detail td{display:block}
+  tr.detail td::before{content:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <h1 id="title"></h1>
+  <p class="dek" id="dek"></p>
+
+  <div class="controls" role="search">
+    <div class="field q"><label for="q">Search by officer, department or agency</label><input id="q" type="search" autocomplete="off" placeholder="Type a name or department"></div>
+    <div class="field"><label for="county">County that listed the officer</label><select id="county"></select></div>
+    <div class="field"><label for="status">Current status</label><select id="status"></select></div>
+    <div class="field mobile-sort"><label for="msort">Sort by</label><select id="msort">
+      <option value="dk:desc">Date, newest first</option>
+      <option value="dk:asc">Date, oldest first</option>
+      <option value="n:asc">Officer, A to Z</option>
+      <option value="dept:asc">Department, A to Z</option>
+      <option value="cat:asc">Category</option>
+    </select></div>
+    <button class="reset" id="reset" type="button">Clear filters</button>
+  </div>
+
+  <div class="mix">
+    <h2>Category of misconduct</h2>
+    <div class="bar" id="bar" role="group" aria-label="Share of officers by category. Select a segment to filter."></div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="bar-row">
+    <div class="count" id="count" aria-live="polite"></div>
+    <button class="linkbtn" id="csv" type="button">Download these results as CSV</button>
+  </div>
+
+  <table>
+    <thead><tr id="head"></tr></thead>
+    <tbody id="body"></tbody>
+  </table>
+  <div class="pager" id="pager"></div>
+
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+/* ---------- EDIT THESE ---------- */
+var CONFIG = {
+  title: "Illinois Brady/Giglio officer database",
+  dek: "Search officers who appear on Brady/Giglio lists kept by Illinois prosecutors. Filter by county, category of misconduct or current status.",
+  note: "Brady and Giglio refer to U.S. Supreme Court rulings that require prosecutors to give defendants evidence that could help their case, including information that could undermine an officer's credibility.",
+  credit: "Source: Records obtained through Freedom of Information Act requests to Illinois prosecuting offices. Reporting by Max Blaisdell and Sam Stecklow.",
+  pageSize: 25,
+  dataUrl: "brady_giglio_cleaned.csv"  /* swap for the GitHub raw URL when hosted */
+};
+/* -------------------------------- */
+
+var DATA = [];
+
+var COLS = [
+  {k:"n",   label:"Officer"},
+  {k:"dept",label:"Department of misconduct"},
+  {k:"cty", label:"Listed by county"},
+  {k:"dk",  label:"Date of finding"},
+  {k:"cat", label:"Category"},
+  {k:"st",  label:"Current status"}
+];
+var CAT_COLORS = {
+  "No Reason Listed":"#c9ced4","Credibility/Bias Issue":"#1f3a4d","Misconduct":"#3f6c8a",
+  "Criminal Charge/Arrest":"#c0762f","Criminal Conviction":"#8c2f39","Investigation":"#6d8fa8",
+  "Complaint":"#a9bfce","Lawsuit":"#556b5d"
+};
+var S = {q:"",county:"",status:"",cat:"",sort:"dk",dir:"desc",page:0,open:{}};
+var $ = function(id){return document.getElementById(id)};
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function na(s){return s?esc(s):'<span class="na">Not listed</span>'}
+function counties(r){return r.cty?r.cty.split(/,\s*/):[]}
+function num(n){return n.toLocaleString("en-US")}
+
+function parseCSV(text){
+  if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+  var rows=[], row=[], f="", q=false;
+  for(var i=0;i<text.length;i++){
+    var c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){f+='"';i++} else q=false }
+      else f+=c;
+    } else if(c==='"') q=true;
+    else if(c===","){row.push(f);f=""}
+    else if(c==="\n"||c==="\r"){
+      if(c==="\r"&&text[i+1]==="\n") i++;
+      row.push(f);f="";rows.push(row);row=[];
+    } else f+=c;
+  }
+  if(f!==""||row.length){row.push(f);rows.push(row)}
+  return rows;
+}
+
+function loadData(url){
+  return fetch(url).then(function(res){
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    return res.text();
+  }).then(function(text){
+    var rows=parseCSV(text), head=rows.shift();
+    return rows.filter(function(r){return r.length>1||r[0]}).map(function(r){
+      var o={}; head.forEach(function(k,i){o[k]=r[i]==null?"":r[i]});
+      o.dk=Number(o.dk)||0;
+      return o;
+    });
+  });
+}
+
+function prepData(){
+  DATA.forEach(function(r,i){
+    r._i=i;
+    r._s=(r.n+" "+r.dept+" "+r.ag+" "+r.role+" "+r.id).toLowerCase();
+    r._c=counties(r);
+  });
+}
+
+function matches(r, skipCat){
+  if(S.q && r._s.indexOf(S.q.toLowerCase())<0) return false;
+  if(S.county && r._c.indexOf(S.county)<0) return false;
+  if(S.status){ if(S.status==="__none"){ if(r.st) return false } else if(r.st!==S.status) return false }
+  if(!skipCat && S.cat && r.cat!==S.cat) return false;
+  return true;
+}
+
+function buildSelects(){
+  var cm={}; DATA.forEach(function(r){r._c.forEach(function(c){cm[c]=(cm[c]||0)+1})});
+  var cs=Object.keys(cm).sort(function(a,b){return a.localeCompare(b)});
+  $("county").innerHTML='<option value="">All counties</option>'+cs.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+' ('+num(cm[c])+')</option>'}).join("");
+  var sm={}; DATA.forEach(function(r){var k=r.st||"__none";sm[k]=(sm[k]||0)+1});
+  var order=["Active","Inactive","Decertified"];
+  var keys=Object.keys(sm).sort(function(a,b){var x=order.indexOf(a),y=order.indexOf(b);return (x<0?9:x)-(y<0?9:y)});
+  $("status").innerHTML='<option value="">All statuses</option>'+keys.map(function(k){return '<option value="'+esc(k)+'">'+(k==="__none"?"Not listed":esc(k))+' ('+num(sm[k])+')</option>'}).join("");
+}
+
+function buildHead(){
+  $("head").innerHTML=COLS.map(function(c){
+    return '<th scope="col" data-k="'+c.k+'" aria-sort="none"><button type="button">'+c.label+'</button></th>';
+  }).join("")+'<th scope="col"><span style="position:absolute;left:-9999px">Details</span></th>';
+  $("head").addEventListener("click",function(e){
+    var th=e.target.closest("th[data-k]"); if(!th) return;
+    var k=th.getAttribute("data-k");
+    if(S.sort===k){S.dir=S.dir==="asc"?"desc":"asc"} else {S.sort=k;S.dir=(k==="dk")?"desc":"asc"}
+    S.page=0; render();
+  });
+}
+
+function sorted(rows){
+  var k=S.sort, d=S.dir==="asc"?1:-1;
+  return rows.slice().sort(function(a,b){
+    var x=a[k],y=b[k];
+    if(k==="dk"){
+      if(!x&&!y) return a.n.localeCompare(b.n);
+      if(!x) return 1; if(!y) return -1;
+      return (x-y)*d || a.n.localeCompare(b.n);
+    }
+    if(!x&&!y) return 0; if(!x) return 1; if(!y) return -1;
+    return x.localeCompare(y)*d || a.n.localeCompare(b.n);
+  });
+}
+
+function renderMix(){
+  var base=DATA.filter(function(r){return matches(r,true)});
+  var cm={}; base.forEach(function(r){cm[r.cat]=(cm[r.cat]||0)+1});
+  var cats=Object.keys(cm).sort(function(a,b){return cm[b]-cm[a]});
+  var total=base.length||1;
+  $("bar").className="bar"+(S.cat?" filtering":"");
+  $("bar").innerHTML=cats.map(function(c){
+    return '<button type="button" data-cat="'+esc(c)+'" class="'+(S.cat===c?"on":"")+'" style="width:'+(cm[c]/total*100)+'%;background:'+(CAT_COLORS[c]||"#999")+'" aria-label="'+esc(c)+': '+cm[c]+'" title="'+esc(c)+': '+num(cm[c])+'"></button>';
+  }).join("");
+  $("chips").innerHTML=cats.map(function(c){
+    return '<button type="button" class="chip'+(S.cat===c?" on":"")+'" data-cat="'+esc(c)+'" aria-pressed="'+(S.cat===c)+'"><i style="background:'+(CAT_COLORS[c]||"#999")+'"></i>'+esc(c)+' <b>'+num(cm[c])+'</b></button>';
+  }).join("");
+}
+
+function fmtStatus(s){
+  if(!s) return '<span class="na">Not listed</span>';
+  return s==="Decertified"?'<span class="decert">'+esc(s)+'</span>':esc(s);
+}
+
+function detailHTML(r){
+  var items=[];
+  if(r.id) items.push(["ILETSB ID",esc(r.id)]);
+  if(r.role) items.push(["Role",esc(r.role)]);
+  items.push(["Type of source",na(r.src)]);
+  items.push(["Current agency",na(r.ag)]);
+  items.push(["Current county or counties",na(r.cc)]);
+  return '<dl>'+items.map(function(p){return '<div><dt>'+p[0]+'</dt><dd>'+p[1]+'</dd></div>'}).join("")+'</dl>';
+}
+
+function render(){
+  var rows=sorted(DATA.filter(function(r){return matches(r)}));
+  var total=rows.length, ps=CONFIG.pageSize, pages=Math.max(1,Math.ceil(total/ps));
+  if(S.page>=pages) S.page=pages-1;
+  var slice=rows.slice(S.page*ps,S.page*ps+ps);
+
+  renderMix();
+  var filtered=(total!==DATA.length);
+  $("count").innerHTML=total===0?'<strong>No matches.</strong>':
+    'Showing <strong>'+num(S.page*ps+1)+'</strong> to <strong>'+num(S.page*ps+slice.length)+'</strong> of <strong>'+num(total)+'</strong>'+(filtered?' matching officers':' officers');
+
+  Array.prototype.forEach.call($("head").querySelectorAll("th[data-k]"),function(th){
+    th.setAttribute("aria-sort",th.getAttribute("data-k")===S.sort?(S.dir==="asc"?"ascending":"descending"):"none");
+  });
+  $("msort").value=(S.sort+":"+S.dir);
+
+  if(!slice.length){
+    $("body").innerHTML='<tr><td class="empty" colspan="7">No officers match these filters. Try a different spelling or clear the filters.</td></tr>';
+  } else {
+    $("body").innerHTML=slice.map(function(r){
+      var open=!!S.open[r._i];
+      var row='<tr class="row"><td class="name">'+esc(r.n)+'</td>'+
+        '<td data-label="Department">'+na(r.dept)+'</td>'+
+        '<td data-label="Listed by county">'+na(r.cty)+'</td>'+
+        '<td data-label="Date of finding">'+na(r.d)+'</td>'+
+        '<td data-label="Category">'+na(r.cat)+'</td>'+
+        '<td data-label="Current status">'+fmtStatus(r.st)+'</td>'+
+        '<td class="act"><button class="exp" type="button" data-i="'+r._i+'" aria-expanded="'+open+'">'+(open?"Hide details":"More details")+'</button></td></tr>';
+      if(open) row+='<tr class="detail"><td colspan="7">'+detailHTML(r)+'</td></tr>';
+      return row;
+    }).join("");
+  }
+
+  $("pager").innerHTML='<button type="button" id="prev"'+(S.page===0?" disabled":"")+'>Previous</button>'+
+    '<span>Page '+num(S.page+1)+' of '+num(pages)+'</span>'+
+    '<button type="button" id="next"'+(S.page>=pages-1?" disabled":"")+'>Next</button>';
+  $("prev").onclick=function(){S.page--;render();scrollTopOfTable()};
+  $("next").onclick=function(){S.page++;render();scrollTopOfTable()};
+  S._rows=rows;
+  postHeight();
+}
+
+function scrollTopOfTable(){
+  var el=$("count"); if(el.scrollIntoView) el.scrollIntoView({block:"start"});
+}
+
+function csvCell(v){v=v==null?"":String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+function downloadCSV(){
+  var head=["Officer Name","ILETSB ID","Role","County who placed on Brady List","Department of Misconduct","Date of Finding","Category of Misconduct","Type of Source","Current Status","Current Agency","Current County/Counties"];
+  var lines=[head.join(",")];
+  (S._rows||[]).forEach(function(r){
+    lines.push([r.n,r.id,r.role,r.cty,r.dept,r.d,r.cat,r.src,r.st,r.ag,r.cc].map(csvCell).join(","));
+  });
+  var blob=new Blob(["\ufeff"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download="illinois-brady-giglio-officers.csv";
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500);
+}
+
+/* Lets a host page resize the iframe to fit. */
+function postHeight(){
+  try{
+    var h=document.documentElement.scrollHeight;
+    window.parent.postMessage({type:"brady-embed-height",height:h},"*");
+  }catch(e){}
+}
+
+function init(){
+  $("title").textContent=CONFIG.title;
+  $("dek").textContent=CONFIG.dek;
+  var foot="";
+  if(CONFIG.note) foot+="<p>"+esc(CONFIG.note)+"</p>";
+  foot+="<p>Dates shown as a year only were recorded that way in the source data. Rows marked \u201CNot listed\u201D had no information in that field.</p>";
+  if(CONFIG.credit) foot+="<p>"+esc(CONFIG.credit)+"</p>";
+  $("foot").innerHTML=foot;
+
+  buildSelects(); buildHead();
+
+  var t; $("q").addEventListener("input",function(e){
+    clearTimeout(t); var v=e.target.value.trim();
+    t=setTimeout(function(){S.q=v;S.page=0;render()},120);
+  });
+  $("county").addEventListener("change",function(e){S.county=e.target.value;S.page=0;render()});
+  $("status").addEventListener("change",function(e){S.status=e.target.value;S.page=0;render()});
+  $("msort").addEventListener("change",function(e){var p=e.target.value.split(":");S.sort=p[0];S.dir=p[1];S.page=0;render()});
+  $("reset").addEventListener("click",function(){
+    S.q="";S.county="";S.status="";S.cat="";S.page=0;
+    $("q").value="";$("county").value="";$("status").value="";render();
+  });
+  function catClick(e){
+    var b=e.target.closest("[data-cat]"); if(!b) return;
+    var c=b.getAttribute("data-cat"); S.cat=(S.cat===c)?"":c; S.page=0; render();
+  }
+  $("bar").addEventListener("click",catClick);
+  $("chips").addEventListener("click",catClick);
+  $("body").addEventListener("click",function(e){
+    var b=e.target.closest("button.exp"); if(!b) return;
+    var i=b.getAttribute("data-i"); S.open[i]=!S.open[i]; render();
+    var again=document.querySelector('button.exp[data-i="'+i+'"]'); if(again) again.focus();
+  });
+  $("csv").addEventListener("click",downloadCSV);
+  window.addEventListener("resize",postHeight);
+  render();
+}
+$("count").textContent="Loading data\u2026";
+loadData(CONFIG.dataUrl).then(function(rows){
+  DATA=rows; prepData(); init(); postHeight();
+}).catch(function(err){
+  console.error("Could not load "+CONFIG.dataUrl, err);
+  $("count").textContent="Couldn\u2019t load the data file. Please try again later.";
+  postHeight();
+});
+</script>
+</body>
+</html>

@@ -110,4 +110,4 @@ Records with more than one label appeared on more than one list. Other labels, s
 
 ## Credits
 
-Reporting by Max Blaisdell and Sam Stecklow. Database by Gabriel Barrett.
+Reporting by Max Blaisdell and Sam Stecklow.

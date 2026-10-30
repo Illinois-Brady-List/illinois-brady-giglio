@@ -28,12 +28,23 @@ STATUS_FIXES = {"No lllinois LE Employment": "No Illinois law enforcement employ
 
 
 def text(v):
-    """Cell -> stripped string ('' for blank)."""
+    """Turn any cell value into a string with leading/trailing spaces removed.
+
+    Blank cells (None) become '' so every field in the CSV is a plain string.
+    """
     return "" if v is None else str(v).strip()
 
 
 def parse_date(v):
-    """Return (display string, sortable YYYYMMDD int; YYYY0000 for year-only; 0 if blank)."""
+    """Convert a 'Date of Finding' cell into two values for the dashboard.
+
+    Returns (display string, sort key):
+      - real date      -> ("Sept. 18, 2015", 20150918)
+      - year only      -> ("2018", 20180000)
+      - free text      -> (the text as-is, first 4-digit year * 10000, or 0)
+      - blank          -> ("", 0)
+    The sort key lets the dashboard order mixed full and year-only dates.
+    """
     if v is None or (isinstance(v, str) and not v.strip()):
         return "", 0
     if isinstance(v, dt.datetime):
@@ -49,6 +60,13 @@ def parse_date(v):
 
 
 def clean_row(row):
+    """Clean one spreadsheet row and return it as a dict keyed by FIELDS.
+
+    - Strips stray whitespace from every text field.
+    - Splits column B: numbers are ILETSB IDs, text is a job title (role).
+    - Converts the date with parse_date().
+    - Fixes the known status typo and turns the literal "None" agency into ''.
+    """
     name, id_, cty, dept, date, cat, src, st, ag, cc = (list(row) + [None] * 10)[:10]
     # Some rows have a job title typed in the ID column.
     role, id_str = "", ""
@@ -69,15 +87,22 @@ def clean_row(row):
 
 
 def convert(xlsx_path):
+    """Read the first sheet of the xlsx and return a list of cleaned records.
+
+    Skips the header row and any completely empty rows, and keeps the
+    original row order.
+    """
     ws = openpyxl.load_workbook(xlsx_path, data_only=True).active
     rows = ws.iter_rows(min_row=2, values_only=True)  # row 1 = headers
     return [clean_row(r) for r in rows if any(c is not None and str(c).strip() for c in r)]
 
 
+# CSV column order; these are the record keys the dashboard reads
 FIELDS = ["n", "id", "role", "cty", "dept", "d", "dk", "cat", "src", "st", "ag", "cc"]
 
 
 def write_csv(records, path):
+    """Write the cleaned records to a UTF-8 CSV with a header row (FIELDS order)."""
     with open(path, "w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=FIELDS, lineterminator="\n")
         w.writeheader()
@@ -85,6 +110,11 @@ def write_csv(records, path):
 
 
 def main():
+    """Command-line entry point: read the xlsx, write the CSV, print a summary.
+
+    The summary (record count, year-only dates, blank dates, role rows) goes
+    to stderr so it can be sanity-checked against the previous run.
+    """
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("xlsx")
     ap.add_argument("--out", default="brady_giglio_cleaned.csv", help="output CSV path")
